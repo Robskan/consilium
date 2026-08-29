@@ -9,5 +9,169 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
 }
+
+// Defines the permissions a role can be granted.
+enum Permission {
+  CREATE // Create new files or versions. Note that versions can only be created for files that the role has access to
+  READ // Grant access to files or versions that the user has access to.
+  UPDATE // Update existing files or versoins. Note that a user can only update files or versions that the role has access to
+  DELETE // Delete files or versions
+  READ_ALL // [DANGEROUS] Grant access to files or versions, even if their role wouldn't normally allow it.
+  AUDIT_VIEW // [DANGEROUS] Grant access to view the audit trail, which contains sensitive information about users and their actions.
+  ADMINISTRATOR // [DANGEROUS] Manage roles and permissions. Does not allow a user to grant permissions they dont have access to.
+}
+
+// Deines the types of objects that can be affected by an audit trail event.
+enum AuditTargetType {
+  USER
+  ROLE
+  FILE
+  VERSION
+}
+
+// Defines the types of actions that can be recorded in the audit trail.
+enum AuditTrailAction {
+  USER_CREATED // SYSTEM user created a new user after a job ran to sync users from the Google Sheet
+  USER_UPDATED // SYSTEM user updated a user's roles or other information after a job ran to sync users from the Google Sheet
+  USER_DELETED // SYSTEM user deleted a user after a job ran to sync users from the Google Sheet
+  ROLE_CREATED // A user with the ADMINISTRATOR permission created a new role
+  ROLE_UPDATED // A user with the ADMINISTRATOR permission updated a role's permissions or other information
+  ROLE_DELETED // A user with the ADMINISTRATOR permission deleted a role
+  FILE_ACCESSED // A user with the READ permission accessed a file or version
+  FILE_CREATED // A user with the CREATE permission created a new file
+  FILE_UPDATED // A user with the UPDATE permission updated a file's information or added a version
+  FILE_DELETED // A user with the DELETE permission deleted a file
+  FILE_UNDELETED // A file has been manually restored
+  VERSION_CREATED // A user with the CREATE permission created a new version of a file
+  VERSION_UPDATED // A user with the UPDATE permission updated a version's information
+  VERSION_DELETED // A user with the DELETE permission deleted a version of a file
+  VERSION_UNDELETED // A version has been manually restored
+  VERSION_DOWNLOADED // A user with the READ permission downloaded a version of a file
+  AUDIT_VIEWED // A user with the AUDIT_VIEW permission viewed the audit trail
+}
+
+// A user. Should not be generated manually and should corrospond directly to a Discord OAuth user. The only exception is the SYSTEM user, which is used to perform actions that are not directly tied to a user. Users are granted roles based on their "Position" in the Google Sheet.
+model User {
+  id               String            @id
+  discordID        String?           @unique
+  username         String
+  roles            Role[]
+  auditTrailEvents AuditTrailEvent[]
+}
+
+// A role. Roles are granted automatically based on a user's "Position" in the Google Sheet. Roles grant permissions to users, which allow them to perform certain actions in the system. File access control is granted per-role.
+model Role {
+  id             Int          @id @default(autoincrement())
+  name           String       @unique
+  permissions    Permission[]
+  sheetsTriggers String[] // List of "Position" names that will grant this role to a user.
+  users          User[] // Users with a role
+  files          File[] // Files that this role has access to
+}
+
+// A file. Files are the main objects in the system. They can have multiple versions, and access to them is controlled by roles.
+model File {
+  id            Int       @id @default(autoincrement())
+  name          String
+  description   String
+  versions      Version[]
+  requiredRoles Role[]
+  deletedAt     DateTime? // If this is not null, the file will be considered deleted and will not be shown to ANY user. The only way to recover this is through direct db access.
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+}
+
+// A version of a file. Versions are created when a user uploads a new version of a file. They are linked to the file they belong to, and can be accessed by users with the appropriate roles.
+model Version {
+  id           Int       @id @default(autoincrement())
+  file         File      @relation(fields: [fileId], references: [id])
+  fileId       Int
+  version      String
+  versionIndex Int // The index of the version, starting at 0 for the first version. This is used to determine the order of versions.
+  filename     String
+  fileSize     BigInt
+  storageKey   String    @unique // The key used to store the file in the storage provider. This is generated when the version is created and should not be changed.
+  notes        String
+  hidden       Boolean   @default(false) // If a version is hidden, it will not be shown to users who do not have READ_ALL
+  deletedAt    DateTime? // If this is not null, the version will be considered deleted and will not be shown to ANY user. The only way to recover this is through direct db access.
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  @@unique([fileId, version])
+  @@unique([fileId, versionIndex])
+  @@index([fileId, version])
+}
+
+model AuditTrailEvent {
+  id                Int                @id @default(autoincrement())
+  user              User               @relation(fields: [userId], references: [id])
+  ip                String // IP address of the user who performed the action
+  ua                String // User agent string
+  userId            String // ID of the user who performed this action. If the action was performed by the SYSTEM user, this will be "SYSTEM"
+  action            AuditTrailAction
+  timestamp         DateTime           @default(now())
+  auditTrailEffects AuditTrailEffect[]
+
+  @@index([action, timestamp])
+  @@index([userId, timestamp])
+  @@index([timestamp])
+}
+
+model AuditTrailEffect {
+  id      Int             @id @default(autoincrement())
+  event   AuditTrailEvent @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  eventId Int
+
+  targetType AuditTargetType
+  targetId   String
+
+  // Optional: useful for recording what actually changed
+  before Json?
+  after  Json?
+
+  @@index([targetType, targetId])
+  @@index([eventId])
+}
+
+// roles seed
+/**
+ * [
+ * {
+ * "name": "Admin",
+ * "permissions": ["CREATE", "READ", "UPDATE", "DELETE", "READ_ALL", "AUDIT_VIEW", "ADMINISTRATOR"],
+ * "sheetsTriggers": ["Founder", "Lead Operations", "Staff Team"]
+ * },
+ * {
+ * "name": "Lead Community Manager",
+ * "permissions": ["CREATE", "READ", "UPDATE", "DELETE", "READ_ALL", "AUDIT_VIEW"],
+ * "sheetsTriggers": ["Lead Community Manager"]
+ * },
+ * {
+ * "name": "Community Manager",
+ * "permissions": ["CREATE", "READ", "UPDATE", "DELETE", "READ_ALL"],
+ * "sheetsTriggers": ["Lead Community Manager", "Community Manager"]
+ * },
+ * {
+ * "name": "Senior Moderator",
+ * "permissions": ["READ"],
+ * "sheetsTriggers": ["Senior Moderator", "Senior Mod + Writer"]
+ * },
+ * {
+ * "name": "Moderator",
+ * "permissions": ["READ"],
+ * "sheetsTriggers": ["Senior Moderator", "Senior Mod + Writer", "Moderator", "Moderator + Writer", "Trial Moderator", "Trial Mod + Writer"]
+ * },
+ * {
+ * "name": "Writer",
+ * "permissions": ["READ"],
+ * "sheetsTriggers": ["Senior Mod + Writer", "Moderator + Writer", "Trial Mod + Writer", "Writer (CS)"]
+ * },
+ * {
+ * "name": "Community Support",
+ * "permissions": ["READ"],
+ * "sheetsTriggers": ["Community Support", "Community Support of the Month", "Writer (CS)"]
+ * }
+ * ]
+ */

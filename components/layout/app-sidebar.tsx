@@ -22,21 +22,33 @@ const data = {
   navMain: [
     {
       title: "Files",
-      url: "/files",
+      url: "/dashboard/files",
       icon: (
         <Files
         />
       ),
-      isActive: true,
     },
     {
       title: "Admin",
-      url: "/admin",
+      url: "/dashboard/admin",
       icon: (
         <ShieldUser
         />
       ),
-      isActive: false,
+      items: [
+        {
+          title: "Audit Log",
+          url: "/dashboard/admin/audit-log",
+        },
+        {
+          title: "Manage Files",
+          url: "/dashboard/admin/manage-files",
+        },
+        {
+          title: "Manage Roles",
+          url: "/dashboard/admin/manage-roles",
+        },
+      ],
     },
   ],
 }
@@ -50,6 +62,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
             <SidebarMenuButton
                 size="lg"
                 className="data-open:bg-sidebar-accent data-open:text-sidebar-accent-foreground"
+                render={<a href="/dashboard" />}
             >
               <div className="flex aspect-square size-8 items-center justify-center rounded-lg text-sidebar-primary-foreground">
                 <img src="https://botghost.com/img/logo-red.png" alt="BotGhost Logo" className="size-full object-contain" />

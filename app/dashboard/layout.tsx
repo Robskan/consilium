@@ -35,6 +35,7 @@ export default function AppLayout({
                             orientation="vertical"
                             className="mr-2 data-[orientation=vertical]:h-4"
                         />
+                        {/* The little path arrows at the top, just uses the dom path for now, might change later */}
                         <Breadcrumb>
                             <BreadcrumbList>
                                 {segments.map((segment, index) => {

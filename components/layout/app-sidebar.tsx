@@ -1,5 +1,3 @@
-"use client"
-
 import * as React from "react"
 
 import { NavMain } from "@/components/layout/nav-main"
@@ -11,49 +9,11 @@ import {
   SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem,
   SidebarRail,
 } from "@/components/ui/sidebar"
-import {Files, ShieldUser} from "lucide-react"
+import type { Tabs } from "@/components/layout/sidebar-data"
 
-// This is sample data.
-const data = {
-  user: {
-    name: "Lordseriouspig",
-    role: "Community Manager",
-    avatar: "https://cdn.discordapp.com/avatars/961416958027386890/1b7c171232b2e3f310688b979615421f.webp", },
-  navMain: [
-    {
-      title: "Files",
-      url: "/dashboard/files",
-      icon: (
-        <Files
-        />
-      ),
-    },
-    {
-      title: "Admin",
-      url: "/dashboard/admin",
-      icon: (
-        <ShieldUser
-        />
-      ),
-      items: [
-        {
-          title: "Audit Log",
-          url: "/dashboard/admin/audit-log",
-        },
-        {
-          title: "Manage Files",
-          url: "/dashboard/admin/manage-files",
-        },
-        {
-          title: "Manage Roles",
-          url: "/dashboard/admin/manage-roles",
-        },
-      ],
-    },
-  ],
-}
-
-export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
+export function AppSidebar({ data, ...props }: React.ComponentProps<typeof Sidebar> & {
+  data: Tabs
+}) {
   return (
     <Sidebar collapsible="icon" {...props}>
       <SidebarHeader>

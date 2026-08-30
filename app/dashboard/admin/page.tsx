@@ -1,4 +1,5 @@
 export default function AdminPage() {
+    // honestly might just 404 this page
     return (
         <>
             <div className="grid auto-rows-min gap-4 md:grid-cols-3">

@@ -14,6 +14,7 @@ datasource db {
 
 // Defines the permissions a role can be granted.
 enum Permission {
+  ACCESS // Grant access to the system. This is required for any user to be able to log in and use the system.
   CREATE // Create new files or versions. Note that versions can only be created for files that the role has access to
   READ // Grant access to files or versions that the user has access to.
   UPDATE // Update existing files or versoins. Note that a user can only update files or versions that the role has access to
@@ -55,10 +56,21 @@ enum AuditTrailAction {
 // A user. Should not be generated manually and should corrospond directly to a Discord OAuth user. The only exception is the SYSTEM user, which is used to perform actions that are not directly tied to a user. Users are granted roles based on their "Position" in the Google Sheet.
 model User {
   id               String            @id
-  discordID        String?           @unique
+  name             String
+  email            String // Not actually used and set to an .invalid email addr, but betterauth requires it.
+  emailVerified    Boolean           @default(false)
+  image            String?
+  discordID        String            @unique
   username         String
   roles            Role[]
   auditTrailEvents AuditTrailEvent[]
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  sessions         Session[]
+  accounts         Account[]
+
+  @@unique([email])
+  @@map("user")
 }
 
 // A role. Roles are granted automatically based on a user's "Position" in the Google Sheet. Roles grant permissions to users, which allow them to perform certain actions in the system. File access control is granted per-role.
@@ -101,7 +113,6 @@ model Version {
 
   @@unique([fileId, version])
   @@unique([fileId, versionIndex])
-  @@index([fileId, version])
 }
 
 model AuditTrailEvent {
@@ -135,43 +146,60 @@ model AuditTrailEffect {
   @@index([eventId])
 }
 
-// roles seed
-/**
- * [
- * {
- * "name": "Admin",
- * "permissions": ["CREATE", "READ", "UPDATE", "DELETE", "READ_ALL", "AUDIT_VIEW", "ADMINISTRATOR"],
- * "sheetsTriggers": ["Founder", "Lead Operations", "Staff Team"]
- * },
- * {
- * "name": "Lead Community Manager",
- * "permissions": ["CREATE", "READ", "UPDATE", "DELETE", "READ_ALL", "AUDIT_VIEW"],
- * "sheetsTriggers": ["Lead Community Manager"]
- * },
- * {
- * "name": "Community Manager",
- * "permissions": ["CREATE", "READ", "UPDATE", "DELETE", "READ_ALL"],
- * "sheetsTriggers": ["Lead Community Manager", "Community Manager"]
- * },
- * {
- * "name": "Senior Moderator",
- * "permissions": ["READ"],
- * "sheetsTriggers": ["Senior Moderator", "Senior Mod + Writer"]
- * },
- * {
- * "name": "Moderator",
- * "permissions": ["READ"],
- * "sheetsTriggers": ["Senior Moderator", "Senior Mod + Writer", "Moderator", "Moderator + Writer", "Trial Moderator", "Trial Mod + Writer"]
- * },
- * {
- * "name": "Writer",
- * "permissions": ["READ"],
- * "sheetsTriggers": ["Senior Mod + Writer", "Moderator + Writer", "Trial Mod + Writer", "Writer (CS)"]
- * },
- * {
- * "name": "Community Support",
- * "permissions": ["READ"],
- * "sheetsTriggers": ["Community Support", "Community Support of the Month", "Writer (CS)"]
- * }
- * ]
- */
+model DirectoryEntry {
+  // Locally stores a copy of the ACL from the Google Sheet. When a new user is made, their roles are pulled from this list, which is updated on a schedule.
+  discordId   String   @id
+  positionRaw String
+  syncedAt    DateTime @updatedAt
+}
+
+// betterauth stuff, do not modify anything below this line unless you know what you're doing
+model Session {
+  id        String   @id
+  expiresAt DateTime
+  token     String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  ipAddress String?
+  userAgent String?
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([token])
+  @@index([userId])
+  @@map("session")
+}
+
+model Account {
+  id                    String    @id
+  issuer                String
+  accountId             String
+  providerId            String
+  userId                String
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accessToken           String?
+  refreshToken          String?
+  idToken               String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  password              String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  @@unique([issuer, accountId], map: "account_issuer_accountId_uidx")
+  @@index([userId])
+  @@map("account")
+}
+
+model Verification {
+  id         String   @id
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([identifier])
+  @@map("verification")
+}

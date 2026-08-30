@@ -1,3 +1,4 @@
+"use client"
 import { Button } from "@/components/ui/button"
 import {
     Card,
@@ -7,9 +8,16 @@ import {
     CardTitle,
 } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import {DiscordIconIcon} from "@/components/icons/logos-discord-icon";
+import { DiscordIconIcon } from "@/components/icons/logos-discord-icon";
+import { authClient } from "@/lib/auth-client";
 
 export function LoginCard() {
+    const handleLogin = async () => {
+        await authClient.signIn.social({
+            provider: "discord",
+            callbackURL: "/login",
+        })
+    }
     return (
         <Card className="w-full max-w-sm">
             <CardHeader className="text-center">
@@ -17,7 +25,7 @@ export function LoginCard() {
                 <CardDescription>Sign in with Discord to access your files.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
-                <Button className="w-full" size="lg">
+                <Button className="w-full" size="lg" onClick={handleLogin}>
                     <DiscordIconIcon className="fill-primary-foreground"></DiscordIconIcon>
                     Sign in with Discord
                 </Button>

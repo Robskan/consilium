@@ -19,22 +19,22 @@ export async function syncDirectory() {
         positionRaw: string
     }[] = [];
 
-    const currentDiscordIds = new Set(
-        entries.map((entry) => entry.discordId)
-    );
-
     for (const spreadsheetId of ids) {
         const values = await getSheetValues(spreadsheetId, "rawData!A1:B");
 
         const newEntries = values
-            .map(([discordId, positionRaw]) => ({
-                discordId: String(discordId ?? "").trim(),
+            .map(([positionRaw, discordId]) => ({
                 positionRaw: String(positionRaw ?? "").trim(),
+                discordId: String(discordId ?? "").trim(),
             }))
             .filter(({ discordId, positionRaw }) => discordId && positionRaw);
 
         entries.push(...newEntries)
     }
+
+    const currentDiscordIds = new Set(
+        entries.map((entry) => entry.discordId)
+    );
 
     for (const entry of entries) {
         await prisma.directoryEntry.upsert({

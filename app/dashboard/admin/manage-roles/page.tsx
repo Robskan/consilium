@@ -1,20 +1,8 @@
-import {auth} from "@/lib/auth";
-import {headers} from "next/headers";
-import {redirect} from "next/navigation";
-import {hasPermission} from "@/lib/permissions";
+import {requirePermission} from "@/lib/permissions";
 
 export default async function AdminManageRolesPage() {
     // Check if the user can access audit logs
-    const session = await auth.api.getSession({
-        headers: await headers(),
-    })
-    if (!session) {
-        redirect(`/login`); // this should already be caught by layout but wtv
-    }
-    const isAllowed = await hasPermission(session.user.id, "ADMINISTRATOR");
-    if (!isAllowed) {
-        redirect(`/403`);
-    }
+    await requirePermission(["ADMINISTRATOR"]);
     return (
         <>
             <div className="grid auto-rows-min gap-4 md:grid-cols-3">

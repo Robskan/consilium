@@ -1,21 +1,8 @@
-import {prisma} from "@/lib/prisma";
-import {auth} from "@/lib/auth";
-import {headers} from "next/headers";
-import {redirect} from "next/navigation";
-import {hasPermission} from "@/lib/permissions";
+import {requirePermission} from "@/lib/permissions";
 
 export default async function AdminAuditLogPage() {
     // Check if the user can access audit logs
-    const session = await auth.api.getSession({
-        headers: await headers(),
-    })
-    if (!session) {
-        redirect(`/login`); // this should already be caught by layout but wtv
-    }
-    const isAllowed = await hasPermission(session.user.id, "AUDIT_VIEW");
-    if (!isAllowed) {
-        redirect(`/403`);
-    }
+    await requirePermission(["AUDIT_VIEW"])
 
     return (
         <>

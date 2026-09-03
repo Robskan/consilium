@@ -86,7 +86,7 @@ export async function getTabs(userId?: string): Promise<Tabs> {
                         title: "Manage Roles",
                         url: "/dashboard/admin/manage-roles",
                     },
-                ],
+                ].filter(Boolean),
             },
         ].filter(Boolean) as NavItem[],
     };

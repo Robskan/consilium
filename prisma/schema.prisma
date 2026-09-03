@@ -150,7 +150,8 @@ model DirectoryEntry {
   // Locally stores a copy of the ACL from the Google Sheet. When a new user is made, their roles are pulled from this list, which is updated on a schedule.
   discordId   String   @id
   positionRaw String
-  syncedAt    DateTime @updatedAt
+  syncedAt    DateTime @default(now())
+  lastUpdated DateTime @updatedAt
 }
 
 // betterauth stuff, do not modify anything below this line unless you know what you're doing

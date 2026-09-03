@@ -1,11 +1,69 @@
 import { prisma } from "@/lib/prisma";
+import {getSheetValues} from "@/lib/google-sheets";
 
 export async function syncDirectory() {
+    console.info("Starting directory sync")
+    const spreadsheetIds = process.env.SPREADSHEET_IDS;
+
+    if (!spreadsheetIds) {
+        throw new Error("Missing SPREADSHEET_IDS");
+    }
+
+    const ids = spreadsheetIds
+        .split(",")
+        .map((id) => id.trim())
+        .filter(Boolean)
+
+    let entries: {
+        discordId: string
+        positionRaw: string
+    }[] = [];
+
+    const currentDiscordIds = new Set(
+        entries.map((entry) => entry.discordId)
+    );
+
+    for (const spreadsheetId of ids) {
+        const values = await getSheetValues(spreadsheetId, "rawData!A1:B");
+
+        const newEntries = values
+            .map(([discordId, positionRaw]) => ({
+                discordId: String(discordId ?? "").trim(),
+                positionRaw: String(positionRaw ?? "").trim(),
+            }))
+            .filter(({ discordId, positionRaw }) => discordId && positionRaw);
+
+        entries.push(...newEntries)
+    }
+
+    for (const entry of entries) {
+        await prisma.directoryEntry.upsert({
+            where: {
+                discordId: entry.discordId,
+            },
+            create: entry,
+            update: {
+                positionRaw: entry.positionRaw,
+                syncedAt: new Date(),
+            },
+        });
+    }
+
+    await prisma.directoryEntry.deleteMany({
+        where: {
+            discordId: {
+                notIn: [...currentDiscordIds],
+            },
+        },
+    });
+
     await syncAll()
-    return // TODO: make this update the directory with the google sheet
+    console.info("Finished sync directory")
+    return
 }
 
 export async function syncUser(userId: string) {
+    console.info(`Syncing user: ${userId} from the local directory`);
     const user = await prisma.user.findUnique({
         where: {
             id: userId
@@ -61,6 +119,7 @@ export async function syncUser(userId: string) {
 export async function syncAll() {
     // gets everything and does it all in memory
     // we run a sync all function instead of running a sync on login so we can remove perms from already logged-in users. probs could do it on any permission check but its probably better this way
+    console.info("Syncing all entries from the local directory")
     const [users, directoryEntries, roles] = await Promise.all([
         prisma.user.findMany({
             select: {

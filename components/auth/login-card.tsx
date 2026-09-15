@@ -1,4 +1,8 @@
 "use client"
+
+import { useState } from "react"
+import { flushSync } from "react-dom"
+import { Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
     Card,
@@ -12,12 +16,29 @@ import { DiscordIconIcon } from "@/components/icons/logos-discord-icon";
 import { authClient } from "@/lib/auth-client";
 
 export function LoginCard() {
+    const [isLoading, setIsLoading] = useState(false)
+
     const handleLogin = async () => {
-        await authClient.signIn.social({
+        flushSync(() => {
+            setIsLoading(true)
+        })
+
+        const { data, error } = await authClient.signIn.social({
             provider: "discord",
             callbackURL: "/login",
+            disableRedirect: true,
         })
+
+        if (error || !data?.url) {
+            flushSync(() => {
+                setIsLoading(false)
+            })
+            return
+        }
+
+        window.location.assign(data.url)
     }
+
     return (
         <Card className="w-full max-w-sm">
             <CardHeader className="text-center">
@@ -25,8 +46,18 @@ export function LoginCard() {
                 <CardDescription>Sign in with Discord to access your files.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
-                <Button className="w-full" size="lg" onClick={handleLogin}>
-                    <DiscordIconIcon className="fill-primary-foreground"></DiscordIconIcon>
+                <Button
+                    className="w-full"
+                    size="lg"
+                    onClick={handleLogin}
+                    disabled={isLoading}
+                    aria-busy={isLoading}
+                >
+                    {isLoading ? (
+                        <Loader2 className="size-4 shrink-0 animate-spin" aria-hidden="true" />
+                    ) : (
+                        <DiscordIconIcon className="size-4 shrink-0 fill-primary-foreground" />
+                    )}
                     Sign in with Discord
                 </Button>
                 <div className="flex items-center gap-3">

@@ -97,22 +97,21 @@ model File {
 
 // A version of a file. Versions are created when a user uploads a new version of a file. They are linked to the file they belong to, and can be accessed by users with the appropriate roles.
 model Version {
-  id           Int       @id @default(autoincrement())
-  file         File      @relation(fields: [fileId], references: [id])
-  fileId       Int
-  version      String
-  versionIndex Int // The index of the version, starting at 0 for the first version. This is used to determine the order of versions.
-  filename     String
-  fileSize     BigInt
-  storageKey   String    @unique // The key used to store the file in the storage provider. This is generated when the version is created and should not be changed.
-  notes        String
-  hidden       Boolean   @default(false) // If a version is hidden, it will not be shown to users who do not have READ_ALL
-  deletedAt    DateTime? // If this is not null, the version will be considered deleted and will not be shown to ANY user. The only way to recover this is through direct db access.
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
+  id         Int       @id @default(autoincrement())
+  file       File      @relation(fields: [fileId], references: [id])
+  fileId     Int
+  version    String
+  filename   String
+  fileSize   BigInt
+  storageKey String    @unique // The key used to store the file in the storage provider. This is generated when the version is created and should not be changed.
+  mimeType   String
+  notes      String
+  hidden     Boolean   @default(false) // If a version is hidden, it will not be shown to users who do not have READ_ALL
+  deletedAt  DateTime? // If this is not null, the version will be considered deleted and will not be shown to ANY user. The only way to recover this is through direct db access.
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
 
   @@unique([fileId, version])
-  @@unique([fileId, versionIndex])
 }
 
 model AuditTrailEvent {

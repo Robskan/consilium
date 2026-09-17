@@ -88,7 +88,18 @@ export async function requirePermission(permission: Permission[]) {
     return session;
 }
 
-export async function canAccessFile(userId: string, fileId: number) {
+export async function canAccessFile(userId: string | null, fileId: number | undefined) {
+    if (!fileId) {
+        return false;
+    }
+    if (!userId) {
+        const session = await getSession();
+        if (!(session)) {
+            return false;
+        }
+        userId = session.user.id;
+    }
+
     const file = await prisma.file.findUnique({
         where: {
             id: fileId

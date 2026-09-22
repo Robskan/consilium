@@ -1,9 +1,7 @@
-import {canAccessFile, requirePermission} from "@/lib/permissions";
+import {canAccessFileObject, requirePermission} from "@/lib/permissions";
 import {Permission} from "@/generated/prisma/enums";
-import semver from "semver";
-import mime from "mime-types";
-import {storage} from "@/lib/storage";
 import {prisma} from "@/lib/prisma";
+import {audit} from "@/lib/audit";
 
 interface UpdateFileInput {
     id: number;
@@ -20,53 +18,126 @@ interface UpdateVersionInput {
 
 
 export async function updateFile(input: UpdateFileInput) {
-    await requirePermission([Permission.UPDATE]);
-
-    if (!(await canAccessFile(null, input.id))) {
-        throw new Error("File not found or you do not have permission to update it.");
-    }
+    const session = await requirePermission([Permission.UPDATE]);
 
     const { id, name, description, requiredRoleIds } = input;
-    return await prisma.file.update({
-        where: {
-            id: id,
-        },
-        data: {
-            name,
-            description,
-            requiredRoles: {
-                set: requiredRoleIds?.map((id) => ({
-                    id,
-                })),
+
+    return prisma.$transaction(async (tx) => {
+        const before = await tx.file.findUnique({
+            where: {
+                id: id,
             },
-        },
+            include: {
+                requiredRoles: true,
+            },
+        });
+
+        if(!(await canAccessFileObject(session.user.id, before))) {
+            throw new Error("File not found or you do not have permission to update it.");
+        }
+
+        const updated = await tx.file.update({
+            where: {
+                id: id,
+            },
+            data: {
+                name,
+                description,
+                requiredRoles: {
+                    set: requiredRoleIds?.map((id) => ({
+                        id,
+                    })),
+                },
+            },
+            include: {
+                requiredRoles: true,
+            }
+        });
+
+        await audit(tx, {
+            userId: session.user.id,
+            ip: session.session.ipAddress ?? null,
+            ua: session.session.userAgent ?? null,
+            action: "FILE_UPDATED",
+            effects: [
+                {
+                    targetType: "FILE",
+                    targetId: String(id),
+
+                    before: {
+                        name: before!.name,
+                        description: before!.description,
+                        requiredRoles: before!.requiredRoles.map(r => r.id),
+                    },
+
+                    after: {
+                        name: updated.name,
+                        description: updated.description,
+                        requiredRoles: updated.requiredRoles.map(r => r.id),
+                    },
+                },
+            ],
+        });
+
+        return updated;
     });
 }
 
 export async function updateVersion(input: UpdateVersionInput) {
-    await requirePermission([Permission.UPDATE]);
-
-    const fileId = (await prisma.version.findUnique({
-        where: {
-            id: input.id,
-        },
-        select: {
-            fileId: true,
-        },
-    }))?.fileId;
-
-    if (!(await canAccessFile(null, fileId))) {
-        throw new Error("File not found or you do not have permission to update it.");
-    }
+    const session = await requirePermission([Permission.UPDATE]);
 
     const { id, notes, hidden } = input;
-    return await prisma.version.update({
-        where: {
-            id: id,
-        },
-        data: {
-            notes,
-            hidden,
-        },
+
+    return prisma.$transaction(async (tx) => {
+        const before = (await tx.version.findUnique({
+            where: {
+                id: id,
+            },
+            include: {
+                file: {
+                    include: {
+                        requiredRoles: true
+                    }
+                },
+            }
+        })) ?? null;
+
+        if (!(await canAccessFileObject(session.user.id, before?.file ?? null))) {
+            throw new Error("File not found or you do not have permission to update it.");
+        }
+
+        const updated = await tx.version.update({
+            where: {
+                id: id,
+            },
+            data: {
+                notes,
+                hidden,
+            },
+        });
+
+        await audit(tx, {
+            userId: session.user.id,
+            ip: session.session.ipAddress ?? null,
+            ua: session.session.userAgent ?? null,
+            action: "VERSION_UPDATED",
+            effects: [
+                {
+                    targetType: "VERSION",
+                    targetId: String(id),
+
+                    before: {
+                        notes: before!.notes,
+                        hidden: before!.hidden,
+                    },
+
+                    after: {
+                        notes: updated.notes,
+                        hidden: updated.hidden,
+                    },
+                },
+            ],
+        });
+        return updated;
     });
 }

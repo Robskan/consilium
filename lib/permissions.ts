@@ -109,14 +109,27 @@ export async function canAccessFile(userId: string | null, fileId: number | unde
         }
     })
 
-    // File exists?
-    if (!file || file.deletedAt) {
+    return await canAccessFileObject(userId, file);
+}
+
+export async function canAccessFileObject(
+    userId: string,
+    file: {
+        deletedAt: Date | null;
+        requiredRoles: {
+            id: number;
+        }[];
+    } | null,
+    allowDeleted: boolean = false
+) {
+    if (!file) {
         return false;
     }
 
-    // User can actually read files
-    if (!(await hasPermission(userId, [Permission.READ]))) {
-        return false;
+    if (file.deletedAt) {
+        if (!allowDeleted) {
+            return false;
+        }
     }
 
     // If there are no required roles, then anyone with READ permission can access it

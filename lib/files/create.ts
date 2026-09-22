@@ -6,6 +6,7 @@ import {Permission} from "@/generated/prisma/enums";
 import {canAccessFile, requirePermission} from "@/lib/permissions";
 import semver from "semver";
 import mime from 'mime-types';
+import {audit} from "@/lib/audit";
 
 interface CreateFileInput {
     name: string;
@@ -28,7 +29,7 @@ interface CreateVersionInput {
 }
 
 export async function createFile(input: CreateFileInput) {
-    await requirePermission([Permission.CREATE]);
+    const session = await requirePermission([Permission.CREATE]);
 
     const { name, description, filename, data, mimeType, notes } = input;
     const requiredRoleIds = [...new Set(input.requiredRoleIds)];
@@ -55,30 +56,65 @@ export async function createFile(input: CreateFileInput) {
     const stored = await storage.save(data, filename);
 
     try {
-        return await prisma.file.create({
-            data: {
-                name,
-                description,
+        return await prisma.$transaction(async (tx) => {
+            const record = await tx.file.create({
+                data: {
+                    name,
+                    description,
 
-                requiredRoles: {
-                    connect: roles.map(role => ({ id: role.id })),
-                },
+                    requiredRoles: {
+                        connect: roles.map(role => ({ id: role.id })),
+                    },
 
-                versions: {
-                    create: {
-                        version: version,
-                        filename,
-                        fileSize: stored.fileSize,
-                        storageKey: stored.storageKey,
-                        mimeType,
-                        notes,
+                    versions: {
+                        create: {
+                            version: version,
+                            filename,
+                            fileSize: stored.fileSize,
+                            storageKey: stored.storageKey,
+                            mimeType,
+                            notes,
+                        },
                     },
                 },
-            },
-            include: {
-                versions: true,
-                requiredRoles: true,
-            },
+                include: {
+                    versions: true,
+                    requiredRoles: true,
+                },
+            });
+
+            await audit(tx, {
+                userId: session.user.id,
+                ip: session.session.ipAddress ?? null,
+                ua: session.session.userAgent ?? null,
+                action: "FILE_CREATED",
+                effects: [
+                    {
+                        targetType: "FILE",
+                        targetId: String(record.id),
+                        after: {
+                            name: record.name,
+                            description: record.description,
+                            requiredRoles: record.requiredRoles.map(role => role.id),
+                            version: record.versions[0].version,
+                        },
+                    },
+                    {
+                        targetType: "VERSION",
+                        targetId: String(record.versions[0].id),
+                        after: {
+                            version: record.versions[0].version,
+                            filename: record.versions[0].filename,
+                            fileSize: record.versions[0].fileSize.toString(),
+                            storageKey: record.versions[0].storageKey,
+                            mimeType: record.versions[0].mimeType,
+                            notes: record.versions[0].notes,
+                        }
+                    }
+                ],
+            });
+
+            return record;
         });
     } catch (error) {
         // Database creation failed, so don't leave an orphaned file.
@@ -89,7 +125,7 @@ export async function createFile(input: CreateFileInput) {
 }
 
 export async function createVersion(input: CreateVersionInput) {
-    await requirePermission([Permission.CREATE]);
+    const session = await requirePermission([Permission.CREATE]);
 
     const { fileId, filename, data, notes } = input;
     const version = semver.valid(semver.coerce(input.version));
@@ -110,16 +146,40 @@ export async function createVersion(input: CreateVersionInput) {
     );
 
     try {
-        return await prisma.version.create({
-            data: {
-                fileId,
-                version,
-                filename,
-                fileSize: stored.fileSize,
-                storageKey: stored.storageKey,
-                mimeType,
-                notes: notes,
-            },
+        return await prisma.$transaction(async (tx) => {
+            const record = await tx.version.create({
+                data: {
+                    fileId,
+                    version,
+                    filename,
+                    fileSize: stored.fileSize,
+                    storageKey: stored.storageKey,
+                    mimeType,
+                    notes: notes,
+                },
+            });
+
+            await audit(tx, {
+                userId: session.user.id,
+                ip: session.session.ipAddress ?? null,
+                ua: session.session.userAgent ?? null,
+                action: "VERSION_CREATED",
+                effects: [
+                    {
+                        targetType: "VERSION",
+                        targetId: String(record.id),
+                        after: {
+                            version: record.version,
+                            filename: record.filename,
+                            fileSize: record.fileSize.toString(),
+                            storageKey: record.storageKey,
+                            mimeType: record.mimeType,
+                            notes: record.notes,
+                        }
+                    }
+                ],
+            });
+            return record;
         });
     } catch (error) {
         await storage.delete(stored.storageKey);

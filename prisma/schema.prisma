@@ -117,12 +117,13 @@ model Version {
 model AuditTrailEvent {
   id                Int                @id @default(autoincrement())
   user              User               @relation(fields: [userId], references: [id])
-  ip                String // IP address of the user who performed the action
-  ua                String // User agent string
+  ip                String? // IP address of the user who performed the action
+  ua                String? // User agent string
   userId            String // ID of the user who performed this action. If the action was performed by the SYSTEM user, this will be "SYSTEM"
   action            AuditTrailAction
   timestamp         DateTime           @default(now())
   auditTrailEffects AuditTrailEffect[]
+  metadata          Json? // Optional: useful for recording additional information about the action, such as the name of the file that was accessed or the role that was updated.
 
   @@index([action, timestamp])
   @@index([userId, timestamp])

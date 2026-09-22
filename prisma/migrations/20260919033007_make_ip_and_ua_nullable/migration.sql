@@ -1,0 +1,3 @@
+-- AlterTable
+ALTER TABLE "AuditTrailEvent" ALTER COLUMN "ip" DROP NOT NULL,
+ALTER COLUMN "ua" DROP NOT NULL;

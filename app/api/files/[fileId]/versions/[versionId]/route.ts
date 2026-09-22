@@ -1,14 +1,15 @@
 import { NextResponse } from 'next/server';
-import {canAccessFile, hasPermission} from "@/lib/permissions";
+import {canAccessFile, hasPermission, requirePermission} from "@/lib/permissions";
 import {prisma} from "@/lib/prisma";
-import {getSession} from "@/lib/user";
 import {storage} from "@/lib/storage";
+import {Permission} from "@/generated/prisma/enums";
+import {audit} from "@/lib/audit";
 
 export async function GET(
     request: Request,
     { params }: { params: Promise<{ fileId: string; versionId: string }> }
 ) {
-    const session = await getSession();
+    const session = await requirePermission([Permission.READ]);
     const { fileId: fileIdRaw, versionId: versionIdRaw } = await params;
 
     // User isn't logged in
@@ -49,7 +50,7 @@ export async function GET(
     }
 
     // Checks if the version is hidden and if the user has permission to read hidden versions
-    if (version.hidden && !(await hasPermission(session.user.id, ["READ_ALL"]))) {
+    if (version.hidden && !(await hasPermission(session.user.id, [Permission.READ_ALL]))) {
         return NextResponse.json(
             { error: "Version not found" },
             { status: 404 }
@@ -58,6 +59,19 @@ export async function GET(
 
     try {
         const fileBuffer = await storage.get(version.storageKey);
+
+        await audit(prisma, {
+            userId: session.user.id,
+            ip: session.session.ipAddress ?? null,
+            ua: session.session.userAgent ?? null,
+            action: "VERSION_DOWNLOADED",
+            metadata: {
+                fileId,
+                versionId,
+                filename: version.filename,
+            },
+        });
+
         return new NextResponse(new Uint8Array(fileBuffer), {
             headers: {
                 'Content-Type': version.mimeType,

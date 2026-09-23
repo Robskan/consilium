@@ -1,8 +1,6 @@
-import { redirect } from "next/navigation"
 import AppLayoutClient from "../dashboard/layout-client"
 import {requirePermission} from "@/lib/permissions";
 import React from "react";
-import {getSession} from "@/lib/user";
 import {getTabs} from "@/components/layout/sidebar-data";
 
 export default async function AppLayout({

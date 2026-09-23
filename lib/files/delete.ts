@@ -1,3 +1,5 @@
+import "server-only";
+
 import {canAccessFileObject, requirePermission} from "@/lib/permissions";
 import {Permission} from "@/generated/prisma/enums";
 import {prisma} from "@/lib/prisma";

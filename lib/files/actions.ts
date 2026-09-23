@@ -7,9 +7,6 @@ import {deleteFile, deleteVersion, restoreFile, restoreVersion} from "@/lib/file
 import mime from "mime-types";
 
 export async function createFileAction(formData: FormData): Promise<void> {
-    const MAX_FILE_SIZE = Number(process.env.MAX_FILE_SIZE) || 50 * 1024 * 1024; // 50 MB default
-    const ALLOWED_FILE_TYPES = (process.env.ALLOWED_FILE_TYPES || "").split(",").map(type => type.trim()).filter(Boolean);
-
     const name = formData.get("name");
     const description = formData.get("description");
     const version = formData.get("version");

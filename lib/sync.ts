@@ -14,7 +14,7 @@ export async function syncDirectory() {
         .map((id) => id.trim())
         .filter(Boolean)
 
-    let entries: {
+    const entries: {
         discordId: string
         positionRaw: string
     }[] = [];

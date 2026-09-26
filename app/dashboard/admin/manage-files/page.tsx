@@ -1,8 +1,9 @@
 import {requirePermission} from "@/lib/permissions";
+import {Permission} from "@/generated/prisma/enums";
 
 export default async function AdminManageFilesPage() {
     // Check if the user can access manage files. Note the below is any of, not all of
-    await requirePermission(["CREATE", "UPDATE", "DELETE"]);
+    await requirePermission([Permission.CREATE, Permission.UPDATE, Permission.DELETE]);
     return (
         <>
             <div className="grid auto-rows-min gap-4 md:grid-cols-3">

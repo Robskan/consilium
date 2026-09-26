@@ -1,8 +1,9 @@
 import {requirePermission} from "@/lib/permissions";
+import {Permission} from "@/generated/prisma/enums";
 
 export default async function AdminAuditLogPage() {
     // Check if the user can access audit logs
-    await requirePermission(["AUDIT_VIEW"])
+    await requirePermission([Permission.AUDIT_VIEW])
 
     return (
         <>

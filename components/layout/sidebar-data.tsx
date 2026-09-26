@@ -2,6 +2,7 @@ import {Files, ShieldUser} from "lucide-react";
 import * as React from "react";
 import {prisma} from "@/lib/prisma";
 import {listPermissions} from "@/lib/permissions";
+import {Permission} from "@/generated/prisma/enums";
 export type NavItem = {
     title: string
     url: string
@@ -47,10 +48,31 @@ export async function getTabs(userId?: string): Promise<Tabs> {
         return nullData
     }
     const permissions = await listPermissions(user?.id);
-    const shouldShowAdmin = permissions.some((p) => ["CREATE", "UPDATE", "DELETE", "ADMINISTRATOR", "AUDIT_VIEW"].includes(p));
-    const shouldShowManageFiles = permissions.some((p) => ["CREATE", "UPDATE", "DELETE"].includes(p));
-    const shouldShowManageRoles = permissions.some((p) => ["ADMINISTRATOR"].includes(p));
-    const shouldShowAudit = permissions.some((p) => ["AUDIT_VIEW"].includes(p));
+
+    const shouldShowAdmin = permissions.some((p) =>
+        (
+            [
+                Permission.CREATE,
+                Permission.UPDATE,
+                Permission.DELETE,
+                Permission.ADMINISTRATOR,
+                Permission.AUDIT_VIEW,
+            ] as Permission[]
+        ).includes(p)
+    );
+
+    const shouldShowManageFiles = permissions.some((p) =>
+        ([Permission.CREATE, Permission.UPDATE, Permission.DELETE] as Permission[]).includes(p)
+    );
+
+    const shouldShowManageRoles = permissions.some((p) =>
+        ([Permission.ADMINISTRATOR] as Permission[]).includes(p)
+    );
+
+    const shouldShowAudit = permissions.some((p) =>
+        ([Permission.AUDIT_VIEW] as Permission[]).includes(p)
+    );
+
     return {
         user: {
             name: user.name,

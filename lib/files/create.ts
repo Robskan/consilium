@@ -2,7 +2,7 @@ import "server-only";
 
 import {prisma} from "@/lib/prisma";
 import {storage} from "@/lib/storage";
-import {Permission} from "@/generated/prisma/enums";
+import {AuditTrailAction, AuditTargetType,   Permission} from "@/generated/prisma/enums";
 import {canAccessFile, requirePermission} from "@/lib/permissions";
 import semver from "semver";
 import mime from 'mime-types';
@@ -87,10 +87,10 @@ export async function createFile(input: CreateFileInput) {
                 userId: session.user.id,
                 ip: session.session.ipAddress ?? null,
                 ua: session.session.userAgent ?? null,
-                action: "FILE_CREATED",
+                action: AuditTrailAction.FILE_CREATED,
                 effects: [
                     {
-                        targetType: "FILE",
+                        targetType: AuditTargetType.FILE,
                         targetId: String(record.id),
                         after: {
                             name: record.name,
@@ -100,7 +100,7 @@ export async function createFile(input: CreateFileInput) {
                         },
                     },
                     {
-                        targetType: "VERSION",
+                        targetType: AuditTargetType.VERSION,
                         targetId: String(record.versions[0].id),
                         after: {
                             version: record.versions[0].version,
@@ -163,10 +163,10 @@ export async function createVersion(input: CreateVersionInput) {
                 userId: session.user.id,
                 ip: session.session.ipAddress ?? null,
                 ua: session.session.userAgent ?? null,
-                action: "VERSION_CREATED",
+                action: AuditTrailAction.VERSION_CREATED,
                 effects: [
                     {
-                        targetType: "VERSION",
+                        targetType: AuditTargetType.VERSION,
                         targetId: String(record.id),
                         after: {
                             version: record.version,

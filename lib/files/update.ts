@@ -1,7 +1,7 @@
 import "server-only";
 
 import {canAccessFileObject, requirePermission} from "@/lib/permissions";
-import {Permission} from "@/generated/prisma/enums";
+import {AuditTargetType, AuditTrailAction, Permission} from "@/generated/prisma/enums";
 import {prisma} from "@/lib/prisma";
 import {audit} from "@/lib/audit";
 
@@ -60,10 +60,10 @@ export async function updateFile(input: UpdateFileInput) {
             userId: session.user.id,
             ip: session.session.ipAddress ?? null,
             ua: session.session.userAgent ?? null,
-            action: "FILE_UPDATED",
+            action: AuditTrailAction.FILE_UPDATED,
             effects: [
                 {
-                    targetType: "FILE",
+                    targetType: AuditTargetType.FILE,
                     targetId: String(id),
 
                     before: {
@@ -122,10 +122,10 @@ export async function updateVersion(input: UpdateVersionInput) {
             userId: session.user.id,
             ip: session.session.ipAddress ?? null,
             ua: session.session.userAgent ?? null,
-            action: "VERSION_UPDATED",
+            action: AuditTrailAction.VERSION_UPDATED,
             effects: [
                 {
-                    targetType: "VERSION",
+                    targetType: AuditTargetType.VERSION,
                     targetId: String(id),
 
                     before: {

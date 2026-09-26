@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import {canAccessFile, hasPermission, requirePermission} from "@/lib/permissions";
 import {prisma} from "@/lib/prisma";
 import {storage} from "@/lib/storage";
-import {Permission} from "@/generated/prisma/enums";
+import {AuditTargetType, AuditTrailAction, Permission} from "@/generated/prisma/enums";
 import {audit} from "@/lib/audit";
 
 export async function GET(
@@ -64,7 +64,7 @@ export async function GET(
             userId: session.user.id,
             ip: session.session.ipAddress ?? null,
             ua: session.session.userAgent ?? null,
-            action: "VERSION_DOWNLOADED",
+            action: AuditTrailAction.VERSION_DOWNLOADED,
             metadata: {
                 fileId,
                 versionId,

@@ -1,7 +1,7 @@
 import "server-only";
 
 import {canAccessFileObject, requirePermission} from "@/lib/permissions";
-import {Permission} from "@/generated/prisma/enums";
+import {AuditTargetType, AuditTrailAction, Permission} from "@/generated/prisma/enums";
 import {prisma} from "@/lib/prisma";
 import {audit} from "@/lib/audit";
 
@@ -36,10 +36,10 @@ export async function deleteFile(id: number) {
             userId: session.user.id,
             ip: session.session.ipAddress ?? null,
             ua: session.session.userAgent ?? null,
-            action: "FILE_DELETED",
+            action: AuditTrailAction.FILE_DELETED,
             effects: [
                 {
-                    targetType: "FILE",
+                    targetType: AuditTargetType.FILE,
                     targetId: String(id),
 
                     before: {
@@ -99,10 +99,10 @@ export async function deleteVersion(id: number) {
             userId: session.user.id,
             ip: session.session.ipAddress ?? null,
             ua: session.session.userAgent ?? null,
-            action: "VERSION_DELETED",
+            action: AuditTrailAction.VERSION_DELETED,
             effects: [
                 {
-                    targetType: "VERSION",
+                    targetType: AuditTargetType.VERSION,
                     targetId: String(id),
 
                     before: {
@@ -159,10 +159,10 @@ export async function restoreFile(id: number) {
             userId: session.user.id,
             ip: session.session.ipAddress ?? null,
             ua: session.session.userAgent ?? null,
-            action: "FILE_UNDELETED",
+            action: AuditTrailAction.FILE_UNDELETED,
             effects: [
                 {
-                    targetType: "FILE",
+                    targetType: AuditTargetType.FILE,
                     targetId: String(id),
 
                     before: {
@@ -222,10 +222,10 @@ export async function restoreVersion(id: number) {
             userId: session.user.id,
             ip: session.session.ipAddress ?? null,
             ua: session.session.userAgent ?? null,
-            action: "VERSION_UNDELETED",
+            action: AuditTrailAction.VERSION_UNDELETED,
             effects: [
                 {
-                    targetType: "VERSION",
+                    targetType: AuditTargetType.VERSION,
                     targetId: String(id),
 
                     before: {

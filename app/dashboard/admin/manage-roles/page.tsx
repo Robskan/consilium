@@ -1,8 +1,9 @@
 import {requirePermission} from "@/lib/permissions";
+import {Permission} from "@/generated/prisma/enums";
 
 export default async function AdminManageRolesPage() {
     // Check if the user can access audit logs
-    await requirePermission(["ADMINISTRATOR"]);
+    await requirePermission([Permission.ADMINISTRATOR]);
     return (
         <>
             <div className="grid auto-rows-min gap-4 md:grid-cols-3">

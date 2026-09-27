@@ -65,7 +65,7 @@ export async function getTabs(userId?: string): Promise<Tabs> {
         ([Permission.CREATE, Permission.UPDATE, Permission.DELETE] as Permission[]).includes(p)
     );
 
-    const shouldShowManageRoles = permissions.some((p) =>
+    const shouldShowManage = permissions.some((p) =>
         ([Permission.ADMINISTRATOR] as Permission[]).includes(p)
     );
 
@@ -104,9 +104,13 @@ export async function getTabs(userId?: string): Promise<Tabs> {
                         title: "Manage Files",
                         url: "/dashboard/admin/manage-files",
                     },
-                    shouldShowManageRoles && {
+                    shouldShowManage && {
                         title: "Manage Roles",
                         url: "/dashboard/admin/manage-roles",
+                    },
+                    shouldShowManage && {
+                        title: "Manage Users",
+                        url: "/dashboard/admin/manage-users",
                     },
                 ].filter(Boolean),
             },

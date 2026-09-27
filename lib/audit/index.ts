@@ -21,6 +21,19 @@ interface AuditInput {
     metadata?: InputJsonValue;
 }
 
+export interface AuditQuery {
+    page?: number;
+    pageSize?: number;
+
+    userId?: string;
+    action?: AuditTrailAction;
+    targetType?: AuditTargetType;
+    targetId?: string;
+
+    from?: Date;
+    to?: Date;
+}
+
 export async function audit(
     tx: Prisma.TransactionClient,
     input: AuditInput,

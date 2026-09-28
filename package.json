@@ -20,7 +20,7 @@
     "@dotenvx/dotenvx": "^2.31.1",
     "@dotenvx/next-env": "^2.2.3",
     "@prisma/adapter-pg": "^7.10.0",
-    "@prisma/client": "^7.9.0",
+    "@prisma/client": "^7.10.0",
     "@types/mime-types": "^3.0.1",
     "better-auth": "^1.7.6",
     "class-variance-authority": "^0.7.1",
@@ -67,7 +67,7 @@
     "esbuild@0.28.2": true
   },
   "overrides": {
-    "mysql2": "3.22.0",
+    "mysql2": "3.23.1",
     "deepmerge-ts": "8.0.0",
     "@next/env": "npm:@dotenvx/next-env"
   }

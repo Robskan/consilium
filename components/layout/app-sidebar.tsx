@@ -2,6 +2,7 @@ import * as React from "react"
 
 import { NavMain } from "@/components/layout/nav-main"
 import { NavUser } from "@/components/layout/nav-user"
+import { ThemeToggle } from "@/components/layout/theme-toggle"
 import {
   Sidebar,
   SidebarContent,
@@ -46,6 +47,7 @@ export function AppSidebar({ data, ...props }: React.ComponentProps<typeof Sideb
         <NavMain items={data.navMain} />
       </SidebarContent>
       <SidebarFooter>
+        <ThemeToggle />
         <NavUser user={data.user} />
       </SidebarFooter>
       <SidebarRail />

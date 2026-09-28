@@ -70,6 +70,7 @@ See [.env.example](.env.example) for the supported variables:
 | `SPREADSHEET_IDS` | Comma-separated Google Sheets IDs for directory sync. |
 | `FILE_STORAGE_PATH` | Local directory for uploaded file contents (defaults to `./data/files`). |
 | `MAX_FILE_SIZE` | Upload size limit in bytes. |
+| `CRON_SECRET` | Secret used to authenticate cron jobs. |
 
 The Google service account key is read from `credentials.json`; it is not an environment variable in the current implementation.
 

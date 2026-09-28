@@ -2,6 +2,8 @@ import { betterAuth } from "better-auth"
 import {prismaAdapter} from "@better-auth/prisma-adapter";
 import {prisma} from "./prisma";
 import {syncUser} from "@/lib/sync";
+import {audit} from "@/lib/audit";
+import {AuditTargetType, AuditTrailAction} from "@/generated/prisma/enums";
 
 export const auth = betterAuth({
     database: prismaAdapter(prisma, {
@@ -35,11 +37,42 @@ export const auth = betterAuth({
             create: {
                 after: async (user) => {
                     console.log("new user", user)
+                    await audit(prisma, {
+                        userId: "SYSTEM",
+                        ip: null,
+                        ua: null,
+                        action: AuditTrailAction.USER_CREATED,
+                        effects: [
+                            {
+                                targetType: AuditTargetType.USER,
+                                targetId: user.id,
+                                after: JSON.stringify(user),
+                            },
+                        ],
+                    })
                     syncUser(user.id).catch((err) => {
                         console.error("Error syncing user", err)
                     })
                 },
             },
+            delete: {
+                after: async (user) => {
+                    console.log("delete", user)
+                    await audit(prisma, {
+                        userId: "SYSTEM",
+                        ip: null,
+                        ua: null,
+                        action: AuditTrailAction.USER_DELETED,
+                        effects: [
+                            {
+                                targetType: AuditTargetType.USER,
+                                targetId: user.id,
+                                before: JSON.stringify(user),
+                            },
+                        ],
+                    })
+                }
+            }
         },
     },
 })

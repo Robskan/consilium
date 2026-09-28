@@ -2,6 +2,7 @@ import "dotenv/config";
 import { Pool } from "pg";
 import { PrismaPg } from "@prisma/adapter-pg";
 import {Permission, PrismaClient} from "@/generated/prisma/client";
+import '@dotenvx/dotenvx/config';
 
 const connectionString = `${process.env.DATABASE_URL}`;
 const pool = new Pool({ connectionString });
@@ -147,7 +148,7 @@ async function main() {
         })
     }
 
-    console.log("Database seeded!")
+    console.log("Database seeded! Please hit the CRON endpoint to sync the directory and assign roles to users.")
 }
 
 main()

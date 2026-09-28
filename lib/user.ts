@@ -8,16 +8,3 @@ export async function getSession() {
     })
 }
 
-export async function getSystemUser(tx: Prisma.TransactionClient) {
-    const systemUser = await tx.user.findUnique({
-        where: {
-            id: "SYSTEM",
-        },
-    });
-
-    if (!systemUser) {
-        throw new Error("SYSTEM user does not exist. Please run `npm run db:seed`.");
-    }
-
-    return systemUser;
-}

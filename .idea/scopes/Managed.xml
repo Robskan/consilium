@@ -1,0 +1,3 @@
+<component name="DependencyValidationManager">
+  <scope name="Managed" pattern="((file[consilium]:app//*||file[consilium]:components//*)&amp;&amp;!file[consilium]:components/ui//*||file[consilium]:lib//*||file[consilium]:prisma//*||file[consilium]:public//*||file[consilium]:*)&amp;&amp;!file:package-lock.json&amp;&amp;!file:tsconfig.tsbuildinfo" />
+</component>

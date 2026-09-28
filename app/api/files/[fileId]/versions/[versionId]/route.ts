@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import {canAccessFile, hasPermission, requirePermission} from "@/lib/permissions";
 import {prisma} from "@/lib/prisma";
 import {storage} from "@/lib/storage";
-import {AuditTargetType, AuditTrailAction, Permission} from "@/generated/prisma/enums";
+import {AuditTrailAction, Permission} from "@/generated/prisma/enums";
 import {audit} from "@/lib/audit";
 
 export async function GET(

@@ -18,6 +18,7 @@ import {
 import { usePathname } from "next/navigation"
 import Link from "next/link"
 import type { Tabs } from "@/components/layout/sidebar-data"
+import React from "react";
 
 export default function AppLayoutClient({
                                             children,

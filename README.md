@@ -60,17 +60,17 @@ Consilium is a permission-controlled file library built with Next.js. People sig
 
 See [.env.example](.env.example) for the supported variables:
 
-| Variable | Purpose |
-| --- | --- |
-| `DATABASE_URL` | PostgreSQL connection string used by Prisma. |
-| `BETTER_AUTH_SECRET` | Secret used by Better Auth. |
-| `BETTER_AUTH_URL` | Base URL of this application. |
-| `DISCORD_CLIENT_ID`, `DISCORD_CLIENT_SECRET` | Discord OAuth application credentials. |
-| `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB` | Credentials and database name for the Compose PostgreSQL service. |
-| `SPREADSHEET_IDS` | Comma-separated Google Sheets IDs for directory sync. |
-| `FILE_STORAGE_PATH` | Local directory for uploaded file contents (defaults to `./data/files`). |
-| `MAX_FILE_SIZE` | Upload size limit in bytes. |
-| `CRON_SECRET` | Secret used to authenticate cron jobs. |
+| Variable                                            | Purpose                                                                  |
+|-----------------------------------------------------|--------------------------------------------------------------------------|
+| `DATABASE_URL`                                      | PostgreSQL connection string used by Prisma.                             |
+| `BETTER_AUTH_SECRET`                                | Secret used by Better Auth.                                              |
+| `BETTER_AUTH_URL`                                   | Base URL of this application.                                            |
+| `DISCORD_CLIENT_ID`, `DISCORD_CLIENT_SECRET`        | Discord OAuth application credentials.                                   |
+| `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB` | Credentials and database name for the Compose PostgreSQL service.        |
+| `SPREADSHEET_IDS`                                   | Comma-separated Google Sheets IDs for directory sync.                    |
+| `FILE_STORAGE_PATH`                                 | Local directory for uploaded file contents (defaults to `./data/files`). |
+| `MAX_FILE_SIZE`                                     | Upload size limit in bytes.                                              |
+| `CRON_SECRET`                                       | Secret used to authenticate cron jobs.                                   |
 
 The Google service account key is read from `credentials.json`; it is not an environment variable in the current implementation.
 

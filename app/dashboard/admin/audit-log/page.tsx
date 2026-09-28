@@ -1,5 +1,10 @@
 import {requirePermission} from "@/lib/permissions";
 import {Permission} from "@/generated/prisma/enums";
+import {Metadata} from "next";
+
+export const metadata: Metadata = {
+    title: "Audit Log",
+};
 
 export default async function AdminAuditLogPage() {
     // Check if the user can access audit logs

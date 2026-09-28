@@ -8,8 +8,12 @@ import {
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import {createFileAction} from "@/lib/files/actions";
+import {notFound} from "next/navigation";
 
 export default function TestUploadFilePage() {
+    if (process.env.NODE_ENV === "production") { // Prevent access to this page in production
+        notFound();
+    }
     return (
         <form
             action={createFileAction}

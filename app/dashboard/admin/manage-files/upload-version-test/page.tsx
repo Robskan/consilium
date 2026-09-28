@@ -8,8 +8,12 @@ import {
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import {createVersionAction} from "@/lib/files/actions";
+import {notFound} from "next/navigation";
 
 export default function TestUploadVersionPage() {
+    if (process.env.NODE_ENV === "production") { // Prevent access to this page in production
+        notFound();
+    }
     return (
         <form
             action={createVersionAction}

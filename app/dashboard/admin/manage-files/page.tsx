@@ -1,5 +1,10 @@
 import {requirePermission} from "@/lib/permissions";
 import {Permission} from "@/generated/prisma/enums";
+import {Metadata} from "next";
+
+export const metadata: Metadata = {
+    title: "Manage Files",
+};
 
 export default async function AdminManageFilesPage() {
     // Check if the user can access manage files. Note the below is any of, not all of

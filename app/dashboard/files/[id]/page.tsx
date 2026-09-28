@@ -1,4 +1,10 @@
-export default function FileDetailPage() {
+import {Metadata} from "next";
+
+export const metadata: Metadata = {
+    title: "File Details", // TODO: Add file name here
+};
+
+export default async function FileDetailPage() {
     return (
         <>
             <div className="grid auto-rows-min gap-4 md:grid-cols-3">

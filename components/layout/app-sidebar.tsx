@@ -26,7 +26,7 @@ export function AppSidebar({ data, ...props }: React.ComponentProps<typeof Sideb
                 render={<a href="/dashboard" />}
             >
               <div className="flex aspect-square size-8 items-center justify-center rounded-lg text-sidebar-primary-foreground">
-                <Image src="https://botghost.com/img/logo-red.png" alt="BotGhost Logo" className="size-full object-contain" width={32} height={32} />
+                <Image src="/logo-red.png" alt="BotGhost Logo" className="size-full object-contain" width={32} height={32} />
               </div>
 
               <div className="grid flex-1 text-left text-sm leading-tight">

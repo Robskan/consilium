@@ -32,7 +32,7 @@ Consilium is a permission-controlled file library built with Next.js. People sig
    cp .env.example .env
    ```
 
-   Set `DATABASE_URL`, `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL`, `DISCORD_CLIENT_ID`, and `DISCORD_CLIENT_SECRET`. Generate a secret with `openssl rand -base64 32`. Configure the Discord OAuth callback URL for your local Better Auth setup (`http://localhost:3000/api/auth/callback/discord`).
+   Set `DATABASE_URL`, `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL`, `DISCORD_CLIENT_ID`, `DISCORD_CLIENT_SECRET`, and `CRON_SECRET`. Generate the BetterAuth secret and cron secret with `openssl rand -base64 32`. Configure the Discord OAuth callback URL for your local Better Auth setup (`http://localhost:3000/api/auth/callback/discord`).
 
    For the included PostgreSQL service, set `POSTGRES_PASSWORD` in `.env` and use matching credentials in `DATABASE_URL`, for example `postgresql://consilium:<password>@localhost:5432/consilium`.
 
@@ -42,9 +42,10 @@ Consilium is a permission-controlled file library built with Next.js. People sig
    docker compose up -d
    npm run db:generate
    npm run db:migrate
+   npm run db:seed
    ```
 
-   `npm run db:seed` is optional and adds the development seed data. `npm run db:clean` deletes database data; use it only when that is intended.
+   `npm run db:clean` removes stale users with no roles; use it only when that is intended.
 
 4. If using directory sync, configure `SPREADSHEET_IDS` as a comma-separated list of spreadsheet IDs. The Google Sheets integration reads the `rawData!A1:B` range and expects position in column A and Discord ID in column B. Place a Google service account key at the project root as `credentials.json`, and share the spreadsheets with that service account. Keep this credential file private and out of version control.
 
@@ -54,7 +55,14 @@ Consilium is a permission-controlled file library built with Next.js. People sig
    npm run dev
    ```
 
-   Open [http://localhost:3000](http://localhost:3000).
+   To be able to log in, you will need to perform an initial directory sync by hitting the CRON endpoint at `/api/cron/sync-directory`, with your `CRON_SECRET` with the header `Authorization`: `Bearer <CRON_SECRET>`.
+   If you are, for some reason, not able to use directory sync, run the following sql in your database.
+
+   ```sql
+   INSERT INTO "DirectoryEntry" ("discordId", "positionRaw") VALUES ('<YOUR_DISCORD_ID>', 'Staff Team');
+   ```
+
+   Open [http://localhost:3000](http://localhost:3000) and log in.
 
 ## Configuration
 

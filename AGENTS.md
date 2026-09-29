@@ -10,6 +10,12 @@ Consilium is a permission-controlled file library. Users authenticate with Disco
 
 Prisma stores metadata in PostgreSQL; file bytes use the `FileStorage` interface (currently local disk). Keep storage keys stable and bytes out of database records. Mutations should validate input, enforce permission and file access on the server, record audit events, and transact related database changes. Audit entries capture the actor, action, targets, and optional before/after values. Keep Better Auth models aligned with Better Auth.
 
+Before creating additional server components, look in `lib/` for existing helpers. Trace a feature through its page or API route, component or server action, and relevant `lib/` code before changing it. Keep privileged operations on the server.
+
+When generating user-facing text, do not expose internal implementation details unless the user explicitly needs to know them. Focus on things relevant to the user, such as the outcome of an action, not how the system implements it.
+Translate internal system concepts into language appropriate for the user. Include implementation details only when they are relevant to the user's task, required for transparency, or explicitly requested.
+Keep confirmations concise and focused on what the user needs to know: what happened, what happens next, and whether they need to take any action.
+
 ## Development Workflow
 
 1. Copy `.env.example` to `.env`; set `DATABASE_URL`, Better Auth settings, and Discord OAuth credentials. `SPREADSHEET_IDS` configures Sheets sync; `FILE_STORAGE_PATH` and `MAX_FILE_SIZE` configure uploads.

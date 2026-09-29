@@ -12,6 +12,32 @@ services:
       - POSTGRES_USER=${POSTGRES_USER:-consilium}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
       - POSTGRES_DB=${POSTGRES_DB:-consilium}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U consilium -d consilium"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+  app:
+    image: consilium:local
+    restart: unless-stopped
+    env_file:
+      - .env.decrypted
+    ports:
+      - "3000:3000"
 
+    volumes:
+      - consilium_files:/app/data/files
+      - ./credentials.json:/app/credentials.json:ro
+
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:3000/api/health || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
 volumes:
     postgres_data:
+    consilium_files:

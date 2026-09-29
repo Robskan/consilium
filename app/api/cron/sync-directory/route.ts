@@ -1,7 +1,7 @@
 import { syncDirectory } from "@/lib/sync";
 import {NextResponse, NextRequest} from "next/server";
 
-// TODO: Add auth checks to this endpoint
+export const dynamic = "force-dynamic";
 
 export async function GET(request: NextRequest) {
     const authHeader = request.headers.get('authorization');

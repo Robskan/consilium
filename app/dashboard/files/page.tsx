@@ -5,6 +5,8 @@ import {listReadableFiles} from "@/lib/files";
 import {Card, CardContent, CardDescription, CardHeader, CardTitle} from "@/components/ui/card";
 import {Button} from "@/components/ui/button";
 
+export const dynamic = "force-dynamic";
+
 export const metadata: Metadata = {title: "Files"};
 
 export default async function FilesPage() {

@@ -10,6 +10,8 @@ import {Input} from "@/components/ui/input";
 import {Textarea} from "@/components/ui/textarea";
 import {Label} from "@/components/ui/label";
 
+export const dynamic = "force-dynamic";
+
 export const metadata: Metadata = {title: "Manage Roles"};
 
 const permissionDescriptions: Record<Permission, string> = {

@@ -19,6 +19,8 @@ import {Textarea} from "@/components/ui/textarea";
 import {Label} from "@/components/ui/label";
 import {formatFileSize} from "@/lib/files/format";
 
+export const dynamic = "force-dynamic";
+
 export const metadata: Metadata = {title: "Manage Files"};
 
 function RoleOptions({roles, selectedIds = []}: {roles: {id: number; name: string}[]; selectedIds?: number[]}) {

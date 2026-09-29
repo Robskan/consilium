@@ -7,6 +7,8 @@ import {Card, CardContent, CardDescription, CardHeader, CardTitle} from "@/compo
 import {Button} from "@/components/ui/button";
 import {formatFileSize} from "@/lib/files/format";
 
+export const dynamic = "force-dynamic";
+
 type PageProps = {params: Promise<{id: string}>};
 
 export async function generateMetadata({params}: PageProps): Promise<Metadata> {

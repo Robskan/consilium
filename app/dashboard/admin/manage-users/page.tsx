@@ -7,6 +7,8 @@ import {Button} from "@/components/ui/button";
 import {Card, CardContent, CardDescription, CardHeader, CardTitle} from "@/components/ui/card";
 import {Avatar, AvatarFallback, AvatarImage} from "@/components/ui/avatar";
 
+export const dynamic = "force-dynamic";
+
 export const metadata: Metadata = {title: "Manage Users"};
 
 function initials(name: string) {

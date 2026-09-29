@@ -1,150 +1,93 @@
+import "server-only";
+
 import {Permission} from "@/generated/prisma/client";
 import {prisma} from "@/lib/prisma";
 import {getSession} from "@/lib/user";
 import {redirect} from "next/navigation";
 
-export async function hasPermission(userId: string, permission: Permission[]) {
-    const userPermissions = await listPermissions(userId);
-    return permission.some((p) =>
-        userPermissions.includes(p)
-    );
-}
-
-export async function hasRole(userId: string, roleIds: number[]) {
-    if (roleIds.length === 0) {
-        return false;
-    }
-
+export async function getUserAccess(userId: string) {
     const user = await prisma.user.findUnique({
         where: {
             id: userId,
         },
         select: {
             roles: {
-                where: {
-                    id: {
-                        in: roleIds,
-                    },
-                },
                 select: {
                     id: true,
+                    permissions: true,
                 },
             },
         },
     });
-    return (user?.roles.length ?? 0) > 0;
-}
-
-export async function listPermissions(userId: string) {
-    const user = await prisma.user.findUnique({
-        where: {
-            id: userId,
-        },
-        include: {
-            roles: true,
-        },
-    })
 
     if (!user) {
-        return [];
+        return {roleIds: [], permissions: [] as Permission[]};
     }
 
-    return user.roles.flatMap((role) => role.permissions);
-}
-
-export async function listRoles(userId: string) {
-    const user = await prisma.user.findUnique({
-        where: {
-            id: userId,
-        },
-        include: {
-            roles: true,
-        },
-    })
-
-    if (!user) {
-        return [];
-    }
-
-    return user.roles.flatMap((role) => role.id);
+    return {
+        roleIds: user.roles.map((role) => role.id),
+        permissions: user.roles.flatMap((role) => role.permissions),
+    };
 }
 
 export async function requirePermission(permission: Permission[]) {
+    return (await requirePermissionWithAccess(permission)).session;
+}
+
+export async function requirePermissionWithAccess(permission: Permission[]) {
     const session = await getSession();
 
     if (!session) {
         redirect("/login");
     }
 
-    const userPermissions = await listPermissions(session.user.id);
+    const access = await getUserAccess(session.user.id);
     const hasRequiredPermission = permission.some((p) =>
-        userPermissions.includes(p)
+        access.permissions.includes(p)
     );
 
     if (!hasRequiredPermission) {
         redirect("/403");
     }
 
-    return session;
+    return {session, access};
 }
 
-export async function canAccessFile(userId: string | null, fileId: number | undefined) {
-    if (!fileId) {
-        return false;
-    }
-    if (!userId) {
-        const session = await getSession();
-        if (!(session)) {
-            return false;
-        }
-        userId = session.user.id;
-    }
-
+export async function canAccessFileByAccess(
+    access: Awaited<ReturnType<typeof getUserAccess>>,
+    fileId: number,
+    allowDeleted = false,
+) {
+    if (!Number.isInteger(fileId) || fileId < 1) return false;
     const file = await prisma.file.findUnique({
-        where: {
-            id: fileId
+        where: {id: fileId},
+        select: {
+            deletedAt: true,
+            requiredRoles: {select: {id: true}},
         },
-        include: {
-            requiredRoles: true,
-        }
-    })
-
-    return await canAccessFileObject(userId, file);
+    });
+    return canAccessFileWithAccess(access, file, allowDeleted);
 }
 
-export async function canAccessFileObject(
-    userId: string,
+export function canAccessFileWithAccess(
+    access: Awaited<ReturnType<typeof getUserAccess>>,
     file: {
         deletedAt: Date | null;
-        requiredRoles: {
-            id: number;
-        }[];
+        requiredRoles: {id: number}[];
     } | null,
-    allowDeleted: boolean = false
+    allowDeleted = false,
 ) {
     if (!file) {
         return false;
     }
 
-    if (file.deletedAt) {
-        if (!allowDeleted) {
-            return false;
-        }
-    }
+    if (file.deletedAt && !allowDeleted) return false;
 
     // If there are no required roles, then anyone with READ permission can access it
     if (file.requiredRoles.length === 0) {
         return true;
     }
 
-    // Anyone with READ_ALL can access a file
-    if (await hasPermission(userId, [Permission.READ_ALL])) {
-        return true;
-    }
-
-    // Otherwise check if they have the required roles
-    return await hasRole(
-        userId,
-        file.requiredRoles.map((role) => role.id),
-    );
+    return access.permissions.includes(Permission.READ_ALL) ||
+        file.requiredRoles.some((role) => access.roleIds.includes(role.id));
 }

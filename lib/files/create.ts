@@ -3,7 +3,7 @@ import "server-only";
 import {prisma} from "@/lib/prisma";
 import {storage} from "@/lib/storage";
 import {AuditTrailAction, AuditTargetType,   Permission} from "@/generated/prisma/enums";
-import {canAccessFile, requirePermission} from "@/lib/permissions";
+import {canAccessFileByAccess, requirePermissionWithAccess} from "@/lib/permissions";
 import semver from "semver";
 import mime from 'mime-types';
 import {audit} from "@/lib/audit";
@@ -29,7 +29,7 @@ interface CreateVersionInput {
 }
 
 export async function createFile(input: CreateFileInput) {
-    const session = await requirePermission([Permission.CREATE]);
+    const {session} = await requirePermissionWithAccess([Permission.CREATE]);
 
     const { name, description, filename, data, mimeType, notes } = input;
     const requiredRoleIds = [...new Set(input.requiredRoleIds)];
@@ -125,7 +125,7 @@ export async function createFile(input: CreateFileInput) {
 }
 
 export async function createVersion(input: CreateVersionInput) {
-    const session = await requirePermission([Permission.CREATE]);
+    const {session, access} = await requirePermissionWithAccess([Permission.CREATE]);
 
     const { fileId, filename, data, notes } = input;
     const version = semver.valid(semver.coerce(input.version));
@@ -134,7 +134,7 @@ export async function createVersion(input: CreateVersionInput) {
         throw new Error(`Invalid version`);
     }
 
-    if (!(await canAccessFile(null, fileId))) {
+    if (!(await canAccessFileByAccess(access, fileId))) {
         throw new Error("File not found or you do not have permission to access it.");
     }
 

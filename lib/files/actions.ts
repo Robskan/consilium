@@ -1,10 +1,35 @@
 "use server";
 
-import { createFile, createVersion } from "@/lib/files/create";
+import {revalidatePath} from "next/cache";
+import {createFile, createVersion} from "@/lib/files/create";
 import semver from "semver";
 import {updateFile, updateVersion} from "@/lib/files/update";
 import {deleteFile, deleteVersion, restoreFile, restoreVersion} from "@/lib/files/delete";
 import mime from "mime-types";
+
+const FILES_PATH = "/dashboard/files";
+const MANAGE_FILES_PATH = "/dashboard/admin/manage-files";
+
+function readInteger(formData: FormData, key: string, label: string): number {
+    const value = formData.get(key);
+    const id = typeof value === "string" ? Number(value) : Number.NaN;
+    if (!Number.isInteger(id) || id < 1) throw new Error(`Invalid ${label}`);
+    return id;
+}
+
+function readRoleIds(formData: FormData): number[] {
+    return formData.getAll("requiredRoleIds").map((value) => {
+        const id = typeof value === "string" ? Number(value) : Number.NaN;
+        if (!Number.isInteger(id) || id < 1) throw new Error("Invalid role ID");
+        return id;
+    });
+}
+
+function revalidateFilePaths(fileId?: number) {
+    revalidatePath(FILES_PATH);
+    revalidatePath(MANAGE_FILES_PATH);
+    if (fileId) revalidatePath(`${FILES_PATH}/${fileId}`);
+}
 
 export async function createFileAction(formData: FormData): Promise<void> {
     const name = formData.get("name");
@@ -12,8 +37,6 @@ export async function createFileAction(formData: FormData): Promise<void> {
     const version = formData.get("version");
     const notes = formData.get("notes");
     const upload = formData.get("file");
-    const requiredRoleIdsRaw = formData.getAll("requiredRoleIds");
-
     if (typeof name !== "string" || !name.trim()) {
         throw new Error("File name is required");
     }
@@ -30,15 +53,7 @@ export async function createFileAction(formData: FormData): Promise<void> {
         throw new Error("Version is invalid");
     }
 
-    const requiredRoleIds = requiredRoleIdsRaw.map(value => {
-        const id = Number(value);
-
-        if (!Number.isInteger(id)) {
-            throw new Error("Invalid role ID");
-        }
-
-        return id;
-    });
+    const requiredRoleIds = readRoleIds(formData);
 
     if (!(upload instanceof File)) {
         throw new Error("A file is required");
@@ -49,7 +64,7 @@ export async function createFileAction(formData: FormData): Promise<void> {
     const data = Buffer.from(await upload.arrayBuffer());
 
 
-    await createFile({
+    const created = await createFile({
         name: name.trim(),
         description: description.trim(),
 
@@ -64,17 +79,14 @@ export async function createFileAction(formData: FormData): Promise<void> {
             ? notes.trim()
             : "No release notes",
     });
+    revalidateFilePaths(created.id);
 }
 
 export async function createVersionAction(formData: FormData): Promise<void> {
-    const fileId = Number(formData.get("fileId"));
+    const fileId = readInteger(formData, "fileId", "file ID");
     const version = formData.get("version");
     const notes = formData.get("notes");
     const upload = formData.get("file");
-
-    if (!Number.isInteger(fileId)) {
-        throw new Error("Invalid file ID");
-    }
 
     if (typeof version !== "string" || !version.trim()) {
         throw new Error("Version is required");
@@ -92,7 +104,7 @@ export async function createVersionAction(formData: FormData): Promise<void> {
 
     const data = Buffer.from(await upload.arrayBuffer());
 
-    await createVersion({
+    const created = await createVersion({
         fileId,
         version: version.trim(),
         filename: upload.name,
@@ -100,28 +112,16 @@ export async function createVersionAction(formData: FormData): Promise<void> {
         notes: typeof notes === "string"
             ? notes.trim()
             : "No release notes",
-    })
+    });
+    revalidateFilePaths(created.fileId);
 }
 
 export async function updateFileAction(formData: FormData): Promise<void> {
-    const id = Number(formData.get("fileId"));
+    const id = readInteger(formData, "fileId", "file ID");
     const name = formData.get("name");
     const description = formData.get("description");
-    const requiredRoleIdsRaw = formData.getAll("requiredRoleIds");
 
-    if (!Number.isInteger(id)) {
-        throw new Error("Invalid file ID");
-    }
-
-    const requiredRoleIds = requiredRoleIdsRaw.map(value => {
-        const id = Number(value);
-
-        if (!Number.isInteger(id)) {
-            throw new Error("Invalid role ID");
-        }
-
-        return id;
-    });
+    const requiredRoleIds = readRoleIds(formData);
 
     await updateFile({
         id,
@@ -132,19 +132,16 @@ export async function updateFileAction(formData: FormData): Promise<void> {
         description: typeof description === "string"
             ? description.trim()
             : undefined,
-    })
+    });
+    revalidateFilePaths(id);
 }
 
 export async function updateVersionAction(formData: FormData): Promise<void> {
-    const id = Number(formData.get("fileId"));
+    const id = readInteger(formData, "fileId", "version ID");
     const notes = formData.get("notes");
     const hidden = formData.get("hidden");
 
-    if (!Number.isInteger(id)) {
-        throw new Error("Invalid file ID");
-    }
-
-    await updateVersion({
+    const updated = await updateVersion({
         id,
         notes: typeof notes === "string"
             ? notes.trim()
@@ -154,47 +151,32 @@ export async function updateVersionAction(formData: FormData): Promise<void> {
             : hidden === "false"
                 ? false
                 : undefined
-    })
+    });
+    revalidateFilePaths(updated.fileId);
 }
 
 export async function deleteFileAction(formData: FormData): Promise<void> {
-    const id = Number(formData.get("fileId"));
-
-    if (!Number.isInteger(id)) {
-        throw new Error("Invalid file ID");
-    }
-
-    await deleteFile(id)
+    const id = readInteger(formData, "fileId", "file ID");
+    await deleteFile(id);
+    revalidateFilePaths(id);
 }
 
 export async function deleteVersionAction(formData: FormData): Promise<void> {
-    const id = Number(formData.get("fileId"));
-
-    if (!Number.isInteger(id)) {
-        throw new Error("Invalid file ID");
-    }
-
-    await deleteVersion(id)
+    const id = readInteger(formData, "fileId", "version ID");
+    const deleted = await deleteVersion(id);
+    revalidateFilePaths(deleted.fileId);
 }
 
 export async function restoreFileAction(formData: FormData): Promise<void> {
-    const id = Number(formData.get("fileId"));
-
-    if (!Number.isInteger(id)) {
-        throw new Error("Invalid file ID");
-    }
-
-    await restoreFile(id)
+    const id = readInteger(formData, "fileId", "file ID");
+    await restoreFile(id);
+    revalidateFilePaths(id);
 }
 
 export async function restoreVersionAction(formData: FormData): Promise<void> {
-    const id = Number(formData.get("fileId"));
-
-    if (!Number.isInteger(id)) {
-        throw new Error("Invalid file ID");
-    }
-
-    await restoreVersion(id)
+    const id = readInteger(formData, "fileId", "version ID");
+    const restored = await restoreVersion(id);
+    revalidateFilePaths(restored.fileId);
 }
 
 async function validateFile(upload: File): Promise<string> {

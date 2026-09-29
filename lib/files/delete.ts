@@ -1,12 +1,44 @@
 import "server-only";
 
-import {canAccessFileObject, requirePermission} from "@/lib/permissions";
+import {canAccessFileWithAccess, requirePermissionWithAccess} from "@/lib/permissions";
 import {AuditTargetType, AuditTrailAction, Permission} from "@/generated/prisma/enums";
 import {prisma} from "@/lib/prisma";
 import {audit} from "@/lib/audit";
 
+function fileSnapshot(file: {
+    name: string;
+    description: string;
+    requiredRoles: {id: number}[];
+    versions: {id: number; version: string; filename: string; storageKey: string}[];
+}) {
+    return {
+        name: file.name,
+        description: file.description,
+        requiredRoles: file.requiredRoles.map((role) => role.id),
+        versions: file.versions.map(({id, version, filename, storageKey}) => ({id, version, filename, storageKey})),
+    };
+}
+
+function versionSnapshot(version: {
+    version: string;
+    filename: string;
+    fileSize: bigint;
+    storageKey: string;
+    mimeType: string;
+    notes: string;
+}) {
+    return {
+        version: version.version,
+        filename: version.filename,
+        fileSize: version.fileSize.toString(),
+        storageKey: version.storageKey,
+        mimeType: version.mimeType,
+        notes: version.notes,
+    };
+}
+
 export async function deleteFile(id: number) {
-    const session = (await requirePermission([Permission.DELETE]));
+    const {session, access} = await requirePermissionWithAccess([Permission.DELETE]);
 
     return prisma.$transaction(async (tx) => {
         const file = await tx.file.findUnique({
@@ -19,7 +51,7 @@ export async function deleteFile(id: number) {
             },
         });
 
-        if(!(await canAccessFileObject(session.user.id, file))) {
+        if (!file || !canAccessFileWithAccess(access, file)) {
             throw new Error("File not found or you do not have permission to delete it.");
         }
 
@@ -28,7 +60,7 @@ export async function deleteFile(id: number) {
                 id: id,
             },
             data: {
-                deletedAt: new Date().toISOString(),
+                deletedAt: new Date(),
             },
         });
 
@@ -42,17 +74,7 @@ export async function deleteFile(id: number) {
                     targetType: AuditTargetType.FILE,
                     targetId: String(id),
 
-                    before: {
-                        name: file!.name,
-                        description: file!.description,
-                        requiredRoles: file!.requiredRoles.map(role => role.id),
-                        versions: file!.versions.map(version => ({
-                            id: version.id,
-                            version: version.version,
-                            filename: version.filename,
-                            storageKey: version.storageKey,
-                        })),
-                    },
+                before: fileSnapshot(file),
 
                     after: {
                         deletedAt: deleted.deletedAt?.toISOString()
@@ -66,10 +88,10 @@ export async function deleteFile(id: number) {
 }
 
 export async function deleteVersion(id: number) {
-    const session = await requirePermission([Permission.DELETE]);
+    const {session, access} = await requirePermissionWithAccess([Permission.DELETE]);
 
     return prisma.$transaction(async (tx) => {
-        const version = (await tx.version.findUnique({
+        const version = await tx.version.findUnique({
             where: {
                 id: id,
             },
@@ -80,9 +102,9 @@ export async function deleteVersion(id: number) {
                     }
                 },
             }
-        })) ?? null;
+        });
 
-        if (!(await canAccessFileObject(session.user.id, version?.file ?? null))) {
+        if (!version || !canAccessFileWithAccess(access, version.file)) {
             throw new Error("File not found or you do not have permission to delete it.");
         }
 
@@ -91,7 +113,7 @@ export async function deleteVersion(id: number) {
                 id: id,
             },
             data: {
-                deletedAt: new Date().toISOString(),
+                deletedAt: new Date(),
             },
         });
 
@@ -105,14 +127,7 @@ export async function deleteVersion(id: number) {
                     targetType: AuditTargetType.VERSION,
                     targetId: String(id),
 
-                    before: {
-                        version: version!.version,
-                        filename: version!.filename,
-                        fileSize: version!.fileSize.toString(),
-                        storageKey: version!.storageKey,
-                        mimeType: version!.mimeType,
-                        notes: version!.notes,
-                    },
+                    before: versionSnapshot(version),
 
                     after: {
                         deletedAt: deleted.deletedAt?.toISOString()
@@ -125,7 +140,7 @@ export async function deleteVersion(id: number) {
 }
 
 export async function restoreFile(id: number) {
-    const session = await requirePermission([Permission.DELETE]);
+    const {session, access} = await requirePermissionWithAccess([Permission.DELETE]);
 
     return prisma.$transaction(async (tx) => {
         const file = await tx.file.findUnique({
@@ -138,7 +153,7 @@ export async function restoreFile(id: number) {
             },
         });
 
-        if(!(await canAccessFileObject(session.user.id, file, true))) {
+        if (!file || !canAccessFileWithAccess(access, file, true)) {
             throw new Error("File not found or you do not have permission to restore it.");
         }
 
@@ -166,20 +181,10 @@ export async function restoreFile(id: number) {
                     targetId: String(id),
 
                     before: {
-                        deletedAt: file!.deletedAt?.toISOString()
+                        deletedAt: file.deletedAt?.toISOString()
                     },
 
-                    after: {
-                        name: undeleted!.name,
-                        description: undeleted!.description,
-                        requiredRoles: undeleted!.requiredRoles.map(role => role.id),
-                        versions: undeleted!.versions.map(version => ({
-                            id: version.id,
-                            version: version.version,
-                            filename: version.filename,
-                            storageKey: version.storageKey,
-                        })),
-                    },
+                    after: fileSnapshot(undeleted),
                 },
             ],
         });
@@ -189,10 +194,10 @@ export async function restoreFile(id: number) {
 }
 
 export async function restoreVersion(id: number) {
-    const session = await requirePermission([Permission.DELETE]);
+    const {session, access} = await requirePermissionWithAccess([Permission.DELETE]);
 
     return prisma.$transaction(async (tx) => {
-        const version = (await tx.version.findUnique({
+        const version = await tx.version.findUnique({
             where: {
                 id: id,
             },
@@ -203,9 +208,9 @@ export async function restoreVersion(id: number) {
                     }
                 },
             }
-        })) ?? null;
+        });
 
-        if (!(await canAccessFileObject(session.user.id, version?.file ?? null, true))) {
+        if (!version || !canAccessFileWithAccess(access, version.file, true)) {
             throw new Error("File not found or you do not have permission to restore it.");
         }
 
@@ -229,17 +234,10 @@ export async function restoreVersion(id: number) {
                     targetId: String(id),
 
                     before: {
-                        deletedAt: version!.deletedAt?.toISOString()
+                        deletedAt: version.deletedAt?.toISOString()
                     },
 
-                    after: {
-                        version: undeleted!.version,
-                        filename: undeleted!.filename,
-                        fileSize: undeleted!.fileSize.toString(),
-                        storageKey: undeleted!.storageKey,
-                        mimeType: undeleted!.mimeType,
-                        notes: undeleted!.notes,
-                    },
+                    after: versionSnapshot(undeleted),
                 },
             ],
         });

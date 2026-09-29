@@ -1,6 +1,6 @@
 import "server-only";
 
-import {canAccessFileObject, requirePermission} from "@/lib/permissions";
+import {canAccessFileWithAccess, requirePermissionWithAccess} from "@/lib/permissions";
 import {AuditTargetType, AuditTrailAction, Permission} from "@/generated/prisma/enums";
 import {prisma} from "@/lib/prisma";
 import {audit} from "@/lib/audit";
@@ -20,7 +20,7 @@ interface UpdateVersionInput {
 
 
 export async function updateFile(input: UpdateFileInput) {
-    const session = await requirePermission([Permission.UPDATE]);
+    const {session, access} = await requirePermissionWithAccess([Permission.UPDATE]);
 
     const { id, name, description, requiredRoleIds } = input;
 
@@ -34,7 +34,7 @@ export async function updateFile(input: UpdateFileInput) {
             },
         });
 
-        if(!(await canAccessFileObject(session.user.id, before))) {
+        if (!before || !canAccessFileWithAccess(access, before)) {
             throw new Error("File not found or you do not have permission to update it.");
         }
 
@@ -67,9 +67,9 @@ export async function updateFile(input: UpdateFileInput) {
                     targetId: String(id),
 
                     before: {
-                        name: before!.name,
-                        description: before!.description,
-                        requiredRoles: before!.requiredRoles.map(r => r.id),
+                        name: before.name,
+                        description: before.description,
+                        requiredRoles: before.requiredRoles.map(r => r.id),
                     },
 
                     after: {
@@ -86,7 +86,7 @@ export async function updateFile(input: UpdateFileInput) {
 }
 
 export async function updateVersion(input: UpdateVersionInput) {
-    const session = await requirePermission([Permission.UPDATE]);
+    const {session, access} = await requirePermissionWithAccess([Permission.UPDATE]);
 
     const { id, notes, hidden } = input;
 
@@ -104,7 +104,7 @@ export async function updateVersion(input: UpdateVersionInput) {
             }
         })) ?? null;
 
-        if (!(await canAccessFileObject(session.user.id, before?.file ?? null))) {
+        if (!before || !canAccessFileWithAccess(access, before.file)) {
             throw new Error("File not found or you do not have permission to update it.");
         }
 
@@ -129,8 +129,8 @@ export async function updateVersion(input: UpdateVersionInput) {
                     targetId: String(id),
 
                     before: {
-                        notes: before!.notes,
-                        hidden: before!.hidden,
+                        notes: before.notes,
+                        hidden: before.hidden,
                     },
 
                     after: {

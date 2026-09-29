@@ -49,8 +49,8 @@ export async function listAuditEvents(input: AuditQuery = {}) {
             : {}),
     };
 
-    const [events, total] = await prisma.$transaction(async (tx) => [
-        await tx.auditTrailEvent.findMany({
+    const {events, total} = await prisma.$transaction(async (tx) => {
+        const events = await tx.auditTrailEvent.findMany({
             where,
             orderBy: [
                 { timestamp: "desc" },
@@ -69,10 +69,8 @@ export async function listAuditEvents(input: AuditQuery = {}) {
                 },
                 auditTrailEffects: true,
             },
-        }),
-
-        await tx.auditTrailEvent.count({ where }),
-
+        });
+        const total = await tx.auditTrailEvent.count({where});
         await audit(tx, {
             userId: session.user.id,
             ip: session.session.ipAddress ?? null,
@@ -88,9 +86,9 @@ export async function listAuditEvents(input: AuditQuery = {}) {
                     to: input.to?.toISOString(),
                 },
             },
-        })
-    ]
-    );
+        });
+        return {events, total};
+    });
 
     return {
         events,

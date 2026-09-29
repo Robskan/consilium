@@ -1,5 +1,4 @@
 import { prisma } from "@/lib/prisma";
-import {getSheetValues} from "@/lib/google-sheets";
 import {audit} from "@/lib/audit";
 import {arraysEqual} from "@/lib/utils";
 import {AuditTargetType, AuditTrailAction} from "@/generated/prisma/enums";
@@ -21,6 +20,8 @@ export async function syncDirectory() {
         discordId: string
         positionRaw: string
     }[] = [];
+
+    const { getSheetValues } = await import("@/lib/google-sheets");
 
     for (const spreadsheetId of ids) {
         const values = await getSheetValues(spreadsheetId, "rawData!A1:B");

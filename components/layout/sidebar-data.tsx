@@ -1,7 +1,6 @@
 import {Files, ShieldUser} from "lucide-react";
 import * as React from "react";
-import {prisma} from "@/lib/prisma";
-import {listPermissions} from "@/lib/permissions";
+import {getUserNavigationProfile} from "@/lib/user";
 import {Permission} from "@/generated/prisma/enums";
 export type NavItem = {
     title: string
@@ -36,18 +35,11 @@ export async function getTabs(userId?: string): Promise<Tabs> {
     if (!userId) {
         return nullData;
     }
-    const user = await prisma.user.findUnique({
-        where: {
-            id: userId,
-        },
-        include: {
-            roles: true,
-        },
-    })
+    const user = await getUserNavigationProfile(userId);
     if (!user) {
         return nullData
     }
-    const permissions = await listPermissions(user?.id);
+    const permissions = user.roles.flatMap((role) => role.permissions);
 
     const shouldShowAdmin = permissions.some((p) =>
         (

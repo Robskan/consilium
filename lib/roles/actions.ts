@@ -1,5 +1,6 @@
 "use server";
 
+import {revalidatePath} from "next/cache";
 import { Permission } from "@/generated/prisma/enums";
 import { createRole, deleteRole, updateRole } from "@/lib/roles/index";
 
@@ -24,7 +25,7 @@ function parseSheetsTriggers(raw: FormDataEntryValue[]): string[] {
         }
 
         return entry;
-    });
+    }).flatMap((entry) => entry.split(/\r?\n/).map((trigger) => trigger.trim()).filter(Boolean));
 }
 
 export async function createRoleAction(formData: FormData) {
@@ -41,6 +42,8 @@ export async function createRoleAction(formData: FormData) {
         permissions: parsePermissions(permissionEntries),
         sheetsTriggers: parseSheetsTriggers(sheetsTriggerEntries),
     });
+    revalidatePath("/dashboard/admin/manage-roles");
+    revalidatePath("/dashboard/admin");
 }
 
 export async function updateRoleAction(formData: FormData) {
@@ -59,6 +62,8 @@ export async function updateRoleAction(formData: FormData) {
         permissions: parsePermissions(permissionEntries),
         sheetsTriggers: parseSheetsTriggers(sheetsTriggerEntries),
     });
+    revalidatePath("/dashboard/admin/manage-roles");
+    revalidatePath("/dashboard/admin");
 }
 
 export async function deleteRoleAction(formData: FormData) {
@@ -69,4 +74,6 @@ export async function deleteRoleAction(formData: FormData) {
     }
 
     await deleteRole(id);
+    revalidatePath("/dashboard/admin/manage-roles");
+    revalidatePath("/dashboard/admin");
 }

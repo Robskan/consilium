@@ -2,7 +2,7 @@ import "server-only";
 
 import {AuditTargetType, AuditTrailAction, Permission} from "@/generated/prisma/enums";
 import { prisma } from "@/lib/prisma";
-import { listPermissions, requirePermission } from "@/lib/permissions";
+import {requirePermission, requirePermissionWithAccess} from "@/lib/permissions";
 import { audit } from "@/lib/audit";
 
 interface CreateRoleInput {
@@ -18,22 +18,29 @@ interface UpdateRoleInput {
     sheetsTriggers?: string[];
 }
 
-export async function listRoles() {
-    await requirePermission([Permission.ADMINISTRATOR]);
+export async function getRoleManagementData() {
+    const {access} = await requirePermissionWithAccess([Permission.ADMINISTRATOR]);
+    const roles = await prisma.role.findMany({
+            include: {
+                _count: {
+                    select: {
+                        users: true,
+                        files: true,
+                    },
+                },
+            },
+            orderBy: {name: "asc"},
+        });
 
-    return prisma.role.findMany({
-        orderBy: {
-            name: "asc",
-        },
-    });
+    return {roles, actorPermissions: access.permissions};
 }
 
 export async function createRole(input: CreateRoleInput) {
-    const session = await requirePermission([Permission.ADMINISTRATOR]);
+    const {session, access} = await requirePermissionWithAccess([Permission.ADMINISTRATOR]);
     const name = input.name.trim();
     const permissions = [...new Set(input.permissions)];
     const sheetsTriggers = [...new Set(input.sheetsTriggers.map((value) => value.trim()).filter(Boolean))];
-    const actorPermissions = await listPermissions(session.user.id);
+    const actorPermissions = access.permissions;
 
     if (!name) {
         throw new Error("Role name is required");
@@ -75,13 +82,13 @@ export async function createRole(input: CreateRoleInput) {
 }
 
 export async function updateRole(input: UpdateRoleInput) {
-    const session = await requirePermission([Permission.ADMINISTRATOR]);
+    const {session, access} = await requirePermissionWithAccess([Permission.ADMINISTRATOR]);
     const name = input.name?.trim();
     const permissions = input.permissions ? [...new Set(input.permissions)] : undefined;
     const sheetsTriggers = input.sheetsTriggers
         ? [...new Set(input.sheetsTriggers.map((value) => value.trim()).filter(Boolean))]
         : undefined;
-    const actorPermissions = await listPermissions(session.user.id);
+    const actorPermissions = access.permissions;
 
     if (input.name !== undefined && !name) {
         throw new Error("Role name is required");

@@ -4,29 +4,7 @@ import { Permission } from "@/generated/prisma/enums";
 import { requirePermission } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 
-export type ManagedUser = {
-    id: string;
-    name: string;
-    username: string;
-    discordID: string;
-    image: string | null;
-    createdAt: Date;
-    updatedAt: Date;
-    roles: {
-        id: number;
-        name: string;
-    }[];
-    directoryEntry: {
-        positionRaw: string;
-        syncedAt: Date;
-    } | null;
-};
-
-/**
- * A session safe to return to an administrator. In particular, this excludes
- * the bearer token, which must never leave the data-access layer.
- */
-export type ManagedUserSession = {
+type ManagedUserSession = {
     id: string;
     expiresAt: Date;
     createdAt: Date;
@@ -35,11 +13,29 @@ export type ManagedUserSession = {
     userAgent: string | null;
 };
 
+export type ManagedUser = {
+    id: string;
+    name: string;
+    username: string;
+    discordID: string;
+    image: string | null;
+    roles: {
+        id: number;
+        name: string;
+    }[];
+    sessions: ManagedUserSession[];
+    directoryEntry: {
+        positionRaw: string;
+        syncedAt: Date;
+    } | null;
+};
+
 /**
  * Returns the users that have authenticated with Discord and their current
  * directory-derived access. User identity and roles are intentionally not
  * editable here: Discord and the directory remain their respective sources
- * of truth.
+ * of truth. Session metadata is included for the administrator UI; bearer
+ * tokens are deliberately excluded from the query.
  */
 export async function listManagedUsers(): Promise<ManagedUser[]> {
     await requirePermission([Permission.ADMINISTRATOR]);
@@ -57,8 +53,6 @@ export async function listManagedUsers(): Promise<ManagedUser[]> {
                 username: true,
                 discordID: true,
                 image: true,
-                createdAt: true,
-                updatedAt: true,
                 roles: {
                     select: {
                         id: true,
@@ -67,6 +61,17 @@ export async function listManagedUsers(): Promise<ManagedUser[]> {
                     orderBy: {
                         name: "asc",
                     },
+                },
+                sessions: {
+                    select: {
+                        id: true,
+                        expiresAt: true,
+                        createdAt: true,
+                        updatedAt: true,
+                        ipAddress: true,
+                        userAgent: true,
+                    },
+                    orderBy: {updatedAt: "desc"},
                 },
             },
             orderBy: {
@@ -107,28 +112,6 @@ export async function ensureManageableUser(userId: string): Promise<void> {
     if (!user) {
         throw new Error("User not found");
     }
-}
-
-/** Returns every persisted session for a user, including expired sessions. */
-export async function listUserSessions(
-    userId: string,
-): Promise<ManagedUserSession[]> {
-    await ensureManageableUser(userId);
-
-    return prisma.session.findMany({
-        where: { userId },
-        select: {
-            id: true,
-            expiresAt: true,
-            createdAt: true,
-            updatedAt: true,
-            ipAddress: true,
-            userAgent: true,
-        },
-        orderBy: {
-            updatedAt: "desc",
-        },
-    });
 }
 
 /**
